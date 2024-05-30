@@ -9,10 +9,16 @@ import (
 
 func ReadLists() {
 	la, lb := GetLists()
-	dataA := ReadOneList("list_A/" + la)
-	dataB := ReadOneList("list_B/" + lb)
-	mapA := strSliceToMap(dataA)
-	mapB := strSliceToMap(dataB)
+	// Channels to receive results from tasks
+	ch1 := make(chan map[string]string)
+	ch2 := make(chan map[string]string)
+
+	// Launch tasks as goroutines
+	go processOneList(la, "list_A/", ch1)
+	go processOneList(lb, "list_B/", ch2)
+
+	mapA := <-ch1
+	mapB := <-ch2
 	//fmt.Println(mapA, mapB)
 	diffCount, diff := compareMaps(mapA, mapB)
 
@@ -24,6 +30,12 @@ func ReadLists() {
 		printCSV(diff, "diff.csv")
 	}
 
+}
+
+func processOneList(list string, Listdir string, ch1 chan map[string]string) {
+	data := ReadOneList(Listdir + list)
+	dataMap := strSliceToMap(data)
+	ch1 <- dataMap
 }
 
 func ReadOneList(path string) [][]string {
