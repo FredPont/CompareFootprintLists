@@ -32,8 +32,7 @@ func ReadLists() {
 	mapB := <-ch2
 	nbFilaA := <-cha
 	nbFilaB := <-chb
-	//fmt.Println(nbFilaA, " files in ", la)
-	//fmt.Println(nbFilaB, " files in ", lb)
+
 	writeLogSTDout(strconv.Itoa(nbFilaA)+" files in "+la, logFile)
 	writeLogSTDout(strconv.Itoa(nbFilaB)+" files in "+lb, logFile)
 
@@ -42,21 +41,21 @@ func ReadLists() {
 	switch diffCount {
 	case 0:
 		if nbFilaA == nbFilaB {
-			//fmt.Println("The files are identical !")
+
 			writeLogSTDout("The files are identical !", logFile)
 		} else {
-			//fmt.Println("The number of files is not the same !")
+
 			writeLogSTDout("The number of files is not the same !", logFile)
-			//fmt.Println("no differences found !")
+
 			writeLogSTDout("no differences found !", logFile)
 		}
 
 	default:
 		if nbFilaA != nbFilaB {
-			//fmt.Println("The number of files is not the same !")
+
 			writeLogSTDout("The number of files is not the same !", logFile)
 		}
-		//fmt.Println(diffCount, "differences found !")
+
 		writeLogSTDout(strconv.Itoa(diffCount)+" differences found !", logFile)
 		printCSV(diff, "diff.csv")
 	}
@@ -134,6 +133,7 @@ func compareMaps(map1 map[string]string, map2 map[string]string) (int, [][]strin
 	return diffCount, differences
 }
 
+// writeLogSTDout write message to  Combine stdout and log file writers
 func writeLogSTDout(message string, logFile *os.File) {
 	// Combine stdout and log file writers
 	writer := io.MultiWriter(os.Stdout, logFile)
