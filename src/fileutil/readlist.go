@@ -135,11 +135,7 @@ func compareMaps(map1 map[string]string, map2 map[string]string) (int, [][]strin
 
 // writeLogSTDout write message to  Combine stdout and log file writers
 func writeLogSTDout(message string, logFile *os.File) {
-	// Combine stdout and log file writers
-	//writer := io.MultiWriter(os.Stdout, logFile)
-	// Write to the combined writer
 	fmt.Println(message)
 	log.SetOutput(logFile)
 	log.Println(message)
-
 }
