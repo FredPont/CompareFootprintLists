@@ -12,30 +12,46 @@ func ReadLists() {
 	// Channels to receive results from tasks
 	ch1 := make(chan map[string]string)
 	ch2 := make(chan map[string]string)
+	cha := make(chan int)
+	chb := make(chan int)
 
 	// Launch tasks as goroutines
-	go processOneList(la, "list_A/", ch1)
-	go processOneList(lb, "list_B/", ch2)
+	go processOneList(la, "list_A/", ch1, cha)
+	go processOneList(lb, "list_B/", ch2, chb)
 
 	mapA := <-ch1
 	mapB := <-ch2
-	//fmt.Println(mapA, mapB)
+	nbFilaA := <-cha
+	nbFilaB := <-chb
+	fmt.Println(nbFilaA, " files in ", la)
+	fmt.Println(nbFilaB, " files in ", lb)
+
 	diffCount, diff := compareMaps(mapA, mapB)
 
 	switch diffCount {
 	case 0:
-		fmt.Println("The files are identical found !")
+		if nbFilaA == nbFilaB {
+			fmt.Println("The files are identical !")
+		} else {
+			fmt.Println("The number of files is not the same !")
+			fmt.Println("no differences found !")
+		}
+
 	default:
+		if nbFilaA != nbFilaB {
+			fmt.Println("The number of files is not the same !")
+		}
 		fmt.Println(diffCount, "differences found !")
 		printCSV(diff, "diff.csv")
 	}
 
 }
 
-func processOneList(list string, Listdir string, ch1 chan map[string]string) {
+func processOneList(list string, Listdir string, ch chan map[string]string, ch_ct chan int) {
 	data := ReadOneList(Listdir + list)
 	dataMap := strSliceToMap(data)
-	ch1 <- dataMap
+	ch <- dataMap
+	ch_ct <- len(dataMap)
 }
 
 func ReadOneList(path string) [][]string {

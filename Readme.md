@@ -8,6 +8,7 @@ CompareFootprintLists compare two files footprint lists obtained with [File Foot
 - copy list B in list_B directory (TSV format - 3 columns : footprint filename path - path is not used for comparison)
 - start the software in the CompareFootprintLists directory
 - The number of differences found is displayed in the terminal and a differences file is produced in the result directory
+
 If the files are identical the difference file is not produced
 
 # Features
