@@ -4,10 +4,19 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"os"
+	"strconv"
 )
 
 func ReadLists() {
+	// Create a log file
+	logFile, err := os.Create("output.log")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logFile.Close()
+
 	la, lb := GetLists()
 	// Channels to receive results from tasks
 	ch1 := make(chan map[string]string)
@@ -23,25 +32,32 @@ func ReadLists() {
 	mapB := <-ch2
 	nbFilaA := <-cha
 	nbFilaB := <-chb
-	fmt.Println(nbFilaA, " files in ", la)
-	fmt.Println(nbFilaB, " files in ", lb)
+	//fmt.Println(nbFilaA, " files in ", la)
+	//fmt.Println(nbFilaB, " files in ", lb)
+	writeLogSTDout(strconv.Itoa(nbFilaA)+" files in "+la, logFile)
+	writeLogSTDout(strconv.Itoa(nbFilaB)+" files in "+lb, logFile)
 
 	diffCount, diff := compareMaps(mapA, mapB)
 
 	switch diffCount {
 	case 0:
 		if nbFilaA == nbFilaB {
-			fmt.Println("The files are identical !")
+			//fmt.Println("The files are identical !")
+			writeLogSTDout("The files are identical !", logFile)
 		} else {
-			fmt.Println("The number of files is not the same !")
-			fmt.Println("no differences found !")
+			//fmt.Println("The number of files is not the same !")
+			writeLogSTDout("The number of files is not the same !", logFile)
+			//fmt.Println("no differences found !")
+			writeLogSTDout("no differences found !", logFile)
 		}
 
 	default:
 		if nbFilaA != nbFilaB {
-			fmt.Println("The number of files is not the same !")
+			//fmt.Println("The number of files is not the same !")
+			writeLogSTDout("The number of files is not the same !", logFile)
 		}
-		fmt.Println(diffCount, "differences found !")
+		//fmt.Println(diffCount, "differences found !")
+		writeLogSTDout(strconv.Itoa(diffCount)+" differences found !", logFile)
 		printCSV(diff, "diff.csv")
 	}
 
@@ -116,4 +132,12 @@ func compareMaps(map1 map[string]string, map2 map[string]string) (int, [][]strin
 	}
 
 	return diffCount, differences
+}
+
+func writeLogSTDout(message string, logFile *os.File) {
+	// Combine stdout and log file writers
+	writer := io.MultiWriter(os.Stdout, logFile)
+	// Write to the combined writer
+	log.SetOutput(writer)
+	log.Println(message)
 }
