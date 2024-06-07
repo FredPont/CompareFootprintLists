@@ -32,5 +32,12 @@ example : ./cmpfp-x86_64_linux.bin -p path
 - Duplicate detection
 - Duplicate file allowed if the file path is used as reference key (see options)
 
+# Tips
+- To compare 2 lists with 2 columns (footprint, fileName or path) run the software without argument (fileName reference by default will be used in the second column)
+- To compare lists with file duplicates, use <-p path> option. If necessary remove the beginning of the file path that could lead to diffences. For example :
+path in list A is /home/bob/MyDir
+path in list B is /home/fred/MyDir
+then set path to < MyDir > in both lists 
+
 # ScreenShots
 ![CLI](src/web/screenshot.png)
