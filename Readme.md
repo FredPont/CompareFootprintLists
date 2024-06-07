@@ -26,11 +26,11 @@ example : ./cmpfp-x86_64_linux.bin -p path
  With the option  -p path, the comparison use the file path as reference key, instead of the file name. The advantage is that duplicate file names are allowed, but the file path have to be identicals (or made identical by removing the non-constant part of the path)
 
 # Features
-- Compare 2 lists of 2 columns
+- Compare 2 lists of 3 columns (footprint, file name, path)
 - Parallel comparison
 - First column of the list is used as reference (file name) by default and the second column is used as value (file footprint)
 - Duplicate detection
-- Duplicate file possible if the file path is used as reference key (see options)
+- Duplicate file allowed if the file path is used as reference key (see options)
 
 # ScreenShots
 ![CLI](src/web/screenshot.png)
