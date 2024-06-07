@@ -9,13 +9,17 @@ import (
 	"strconv"
 )
 
-func ReadLists() {
-	// Create a log file
+type Args struct {
+	ComparisonCriteria string // comparison by filename or path (to compare files with same file names)
+}
+
+func ReadLists(args Args) {
+	// Create a log file and close it
 	logFile, err := os.Create("output.log")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logFile.Close()
+	logFile.Close()
 
 	la, lb := GetLists()
 	// Channels to receive results from tasks
@@ -25,13 +29,19 @@ func ReadLists() {
 	chb := make(chan int)
 
 	// Launch tasks as goroutines
-	go processOneList(la, "list_A/", ch1, cha)
-	go processOneList(lb, "list_B/", ch2, chb)
+	go processOneList(la, "list_A/", ch1, cha, args)
+	go processOneList(lb, "list_B/", ch2, chb, args)
 
 	mapA := <-ch1
 	mapB := <-ch2
 	nbFilaA := <-cha
 	nbFilaB := <-chb
+
+	logFile, err = os.OpenFile("output.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	defer logFile.Close()
 
 	writeLogSTDout(strconv.Itoa(nbFilaA)+" files in "+la, logFile)
 	writeLogSTDout(strconv.Itoa(nbFilaB)+" files in "+lb, logFile)
@@ -62,15 +72,22 @@ func ReadLists() {
 
 }
 
-func processOneList(list string, Listdir string, ch chan map[string]string, ch_ct chan int) {
-	data := ReadOneList(Listdir + list)
+func processOneList(list string, Listdir string, ch chan map[string]string, ch_ct chan int, args Args) {
+	data := ReadOneList(Listdir+list, args)
 	dataMap := strSliceToMap(data)
 	ch <- dataMap
 	ch_ct <- len(dataMap)
 }
 
-func ReadOneList(path string) [][]string {
+func ReadOneList(path string, args Args) [][]string {
 	var rows [][]string
+
+	// comparison criteria = map key for signature comparison, can be filename (row 1) or path (row 2)
+	rowIndex := 1
+	if args.ComparisonCriteria == "path" {
+		rowIndex = 2
+	}
+
 	// Open the CSV file
 	file, err := os.Open(path)
 	if err != nil {
@@ -104,17 +121,28 @@ func ReadOneList(path string) [][]string {
 		}
 
 		// Append the value to allPath
-		rows = append(rows, []string{line[0], line[1]})
+		// line[0]=footprint, line[1]=filename
+
+		rows = append(rows, []string{line[0], line[rowIndex]})
 	}
 
 	return rows
 }
 
 func strSliceToMap(slice [][]string) map[string]string {
-	// filename => footprint map
+	// Open the log file for appending (create if it doesn't exist)
+	logFile, err := os.OpenFile("output.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	defer logFile.Close()
+	// filename/path => footprint map
 	fpMap := make(map[string]string, len(slice))
 
 	for _, row := range slice {
+		if Haskey(fpMap, row[1]) {
+			writeLogSTDout("Duplicate file ! "+row[1], logFile)
+		}
 		fpMap[row[1]] = row[0]
 	}
 	return fpMap
@@ -138,4 +166,12 @@ func writeLogSTDout(message string, logFile *os.File) {
 	fmt.Println(message)
 	log.SetOutput(logFile)
 	log.Println(message)
+}
+
+// Haskey test if item is in map
+func Haskey(myMap map[string]string, key string) bool {
+	// Check if key exists
+	_, ok := myMap[key]
+
+	return ok
 }

@@ -20,19 +20,32 @@ package main
 
 import (
 	"CompareFootprintLists/src/fileutil"
+	"flag"
 	"fmt"
 	"time"
 )
 
 func main() {
 	fileutil.Title()
+	args := parseARG()
 
 	t0 := time.Now()
 
-	fileutil.ReadLists()
+	fileutil.ReadLists(args)
 
 	fmt.Println("\ndone !")
 	fmt.Println("Elapsed time : ", time.Since(t0))
 
 	time.Sleep(3 * time.Second) // sleep to read results before windows close
+}
+
+// parse arg of the command line and return the argument struct
+func parseARG() fileutil.Args {
+	args := fileutil.Args{}
+	flag.StringVar(&args.ComparisonCriteria, "p", "filename",
+		`		Comparison by file names or path. filename or path.
+		This option is useful if there are file duplicates whith the same name. 
+		Caution, if path is used, the full file path must be the same in both lists`)
+	flag.Parse()
+	return args
 }
