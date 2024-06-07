@@ -36,7 +36,11 @@ func main() {
 	fmt.Println("\ndone !")
 	fmt.Println("Elapsed time : ", time.Since(t0))
 
-	time.Sleep(3 * time.Second) // sleep to read results before windows close
+	// Define the duration for the countdown
+	// Set the countdown time in seconds
+	countdownFrom := 3
+	fileutil.Timer(countdownFrom)
+	//time.Sleep(3 * time.Second) // sleep to read results before windows close
 }
 
 // parse arg of the command line and return the argument struct
