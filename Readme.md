@@ -33,4 +33,4 @@ example : ./cmpfp-x86_64_linux.bin -p path
 - Duplicate file possible if the file path is used as reference key (see options)
 
 # ScreenShots
-![CLI](src/web/screenshot.jpg)
+![CLI](src/web/screenshot.png)
