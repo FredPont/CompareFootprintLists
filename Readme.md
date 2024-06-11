@@ -10,7 +10,7 @@ Important : the comparison is based on file names by default, if 2 files have th
 - start the software in the CompareFootprintLists directory
 - The number of differences found is displayed in the terminal and a differences file is produced in the result directory
 
-If the files are identical the difference file is not produced
+If the files are identical the difference file is not produced. A log file "output.log" record the terminal output.
 
 # Options
 Usage :
