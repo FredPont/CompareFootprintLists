@@ -92,7 +92,7 @@ func processOneList(list string, Listdir string, ch chan map[string]string, ch_c
 	data := ReadOneList(Listdir+list, args)
 	dataMap := strSliceToMap(data)
 	ch <- dataMap
-	ch_ct <- len(dataMap)
+	ch_ct <- len(data)
 }
 
 func ReadOneList(path string, args Args) [][]string {
