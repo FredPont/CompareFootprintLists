@@ -70,17 +70,15 @@ func ReadLists(args Args) {
 	case 0:
 		if nbFilaA == nbFilaB {
 
-			writeLogSTDout("The files are identical !", logFile)
-		} else {
-
-			writeLogSTDout("The number of files is not the same !", logFile)
-
+			writeLogSTDout("The number of files is the same !", logFile)
 			writeLogSTDout("no differences found !", logFile)
+		} else {
+			writeLogSTDout("The number of files is not the same !", logFile)
+			writeLogSTDout("no differences found in common files !", logFile)
 		}
 
 	default:
 		if nbFilaA != nbFilaB {
-
 			writeLogSTDout("The number of files is not the same !", logFile)
 		}
 
@@ -167,11 +165,12 @@ func strSliceToMap(slice [][]string) map[string]string {
 }
 
 func compareMaps(map1 map[string]string, map2 map[string]string) (int, [][]string) {
-	var differences [][]string
+	//var differences [][]string
+	differences := [][]string{{"file", "footprint A", "footprint B"}}
 	diffCount := 0
 	for key, value := range map1 {
 		if val, ok := map2[key]; !ok || val != value {
-			differences = append(differences, []string{key, val, value})
+			differences = append(differences, []string{key, value, val})
 			diffCount++
 		}
 	}
