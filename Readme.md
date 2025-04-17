@@ -41,4 +41,5 @@ path in list B is /home/fred/MyDir
 then set path to < MyDir > in both lists 
 
 # ScreenShots
-![CLI](src/web/screenshot.png)
+![CLI](src/web/screenshot1.png)
+![CLI](src/web/screenshot2.png)
