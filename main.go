@@ -20,8 +20,10 @@ package main
 
 import (
 	"CompareFootprintLists/src/fileutil"
+	"bufio"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -36,10 +38,24 @@ func main() {
 	fmt.Println("\ndone !")
 	fmt.Println("Elapsed time : ", time.Since(t0))
 
+	fmt.Println("Press 'Enter' to exit.")
+
+	// reader for reading the user input
+	reader := bufio.NewReader(os.Stdin)
+
+	// wait for the user to press the enter key
+	_, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Error reading input: ", err)
+		return
+	}
+
+	fmt.Println("Program exited.")
+
 	// Define the duration for the countdown
 	// Set the countdown time in seconds
-	countdownFrom := 3
-	fileutil.Timer(countdownFrom)
+	//countdownFrom := 3
+	//fileutil.Timer(countdownFrom)
 	//time.Sleep(3 * time.Second) // sleep to read results before windows close
 }
 
