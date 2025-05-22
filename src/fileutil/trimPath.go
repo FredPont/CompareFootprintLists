@@ -29,8 +29,8 @@ func TrimPath(path1, path2 string) {
 	// path2 := "/d1/common/d2"
 
 	// Process both paths
-	path1 = removeLeadingSlash(path1)
-	path2 = removeLeadingSlash(path2)
+	//path1 = removeLeadingSlash(path1)
+	//path2 = removeLeadingSlash(path2)
 	newPath1, newPath2 := RemoveLeadingDirs(path1, path2)
 
 	// Print the results
@@ -40,8 +40,8 @@ func TrimPath(path1, path2 string) {
 
 // Function to remove leading directories before the common directory
 func RemoveLeadingDirs(path1, path2 string) (string, string) {
-	path1 = removeLeadingSlash(path1)
-	path2 = removeLeadingSlash(path2)
+	//path1 = removeLeadingSlash(path1)
+	//path2 = removeLeadingSlash(path2)
 	// Get the separator from the first path. The other path should have the same separator
 	// if the same operating system is used. If not, the separator will be different.
 	// and sep1 will be used to reconstruct the path.
@@ -78,10 +78,11 @@ func RemoveLeadingDirs(path1, path2 string) (string, string) {
 		if contains(segments2, segments1[i]) {
 			commonDir1 = segments1[i]
 			//fmt.Println(segments1, i, segments1[i], "==>", commonDir1)
+			Config.TrimIndexPathA = i
 			break
 		}
-		Config.TrimIndexPathA = i
-		fmt.Println(segments1, i, segments1[i], "==>", commonDir1, Config)
+
+		//fmt.Println(segments1, i, segments1[i], "==>", commonDir1, Config)
 	}
 
 	// Find the common directory in path2
@@ -89,9 +90,10 @@ func RemoveLeadingDirs(path1, path2 string) (string, string) {
 	for i := 0; i < len(segments2); i++ {
 		if contains(segments1, segments2[i]) {
 			commonDir2 = segments2[i]
+			Config.TrimIndexPathB = i
 			break
 		}
-		Config.TrimIndexPathB = i
+
 	}
 
 	// Reconstruct the paths from the common directory onward
