@@ -117,7 +117,7 @@ func ReconstructPathByIndex(path string, startIdx int, sep string) string {
 		return "" // Return empty if index is out of range
 	}
 	newPath := strings.Join(segments[startIdx:], sep)
-	fmt.Println(newPath)
+	//fmt.Println(newPath)
 	return newPath
 }
 

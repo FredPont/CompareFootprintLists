@@ -66,6 +66,7 @@ func ReadLists() {
 
 	// fmt.Println(mapA)
 	// fmt.Println(mapB)
+	fmt.Println(Config)
 
 	diffCount, diff := compareMaps(mapA, mapB)
 
@@ -156,12 +157,14 @@ func ReadOneList(path string, args Args) [][]string {
 
 func ReadOneListAndTrimPath(path string, args Args) [][]string {
 	fmt.Println("\033[34m━━━━━━━━━━━ reconstructPathByIndex ━━━━━━━━━━━\033[0m")
+
 	trimIndex := 0
-	if strings.Contains(path, "listA") {
+	if strings.Contains(path, "list_A") {
 		trimIndex = Config.TrimIndexPathA
 	} else {
 		trimIndex = Config.TrimIndexPathB
 	}
+	fmt.Println("trimIndex", trimIndex)
 	var rows [][]string
 
 	// comparison criteria = map key for signature comparison, can be filename (row 1) or path (row 2)
@@ -205,7 +208,7 @@ func ReadOneListAndTrimPath(path string, args Args) [][]string {
 		// Append the value to allPath
 		// line[0]=footprint, line[1]=filename
 
-		rows = append(rows, []string{line[0], ReconstructPathByIndex(line[rowIndex], trimIndex, Config.CommonDirSep)})
+		rows = append(rows, []string{line[0], ReconstructPathByIndex(removeLeadingSlash(line[rowIndex]), trimIndex, Config.CommonDirSep)})
 	}
 
 	return rows
