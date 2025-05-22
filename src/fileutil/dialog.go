@@ -47,29 +47,19 @@ func AksUser() {
 }
 
 // read3lines read the first 3 lines of the 2 lists
+// and ask user if he wants to trim the path of the footprints
 func read3lines() {
 
 	la, lb := GetLists()
 	HeadA := ReadTsvHead("list_A/" + la)
 	HeadB := ReadTsvHead("list_B/" + lb)
 	path1, path2 := HeadA[0][2], HeadB[0][2]
-	// newPath1, newPath2 := RemoveLeadingDirs(path1, path2)
 
-	// fmt.Println(newPath1)
-	// fmt.Println(newPath2)
 	path1 = removeLeadingSlash(path1)
 	path2 = removeLeadingSlash(path2)
 	showPathAutoTrim(path1, path2)
 	dirToTrim(path1, path2)
-	// showPath(path1, path2)
-	// fmt.Println("Do you want to change the number of directory to trim ? y/n")
-	// // read user input
-	// reader := bufio.NewReader(os.Stdin)
-	// input, _ := reader.ReadString('\n')
-	// if input == "y\n" {
-	// 	Config.TrimIndexPathA = askUser()
-	// 	Config.TrimIndexPathB = askUser()
-	// }
+
 }
 
 // dirToTrim ask user if he wants to change the number of directory to trim

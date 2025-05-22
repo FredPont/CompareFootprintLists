@@ -64,6 +64,9 @@ func ReadLists() {
 	writeLogSTDout(strconv.Itoa(nbFilaA)+" files in "+la, logFile)
 	writeLogSTDout(strconv.Itoa(nbFilaB)+" files in "+lb, logFile)
 
+	// fmt.Println(mapA)
+	// fmt.Println(mapB)
+
 	diffCount, diff := compareMaps(mapA, mapB)
 
 	switch diffCount {
@@ -89,7 +92,13 @@ func ReadLists() {
 }
 
 func processOneList(list string, Listdir string, ch chan map[string]string, ch_ct chan int, args Args) {
-	data := ReadOneList(Listdir+list, args)
+	var data [][]string
+	if Config.TrimPath {
+		data = ReadOneListAndTrimPath(Listdir+list, args)
+	} else {
+		data = ReadOneList(Listdir+list, args)
+	}
+
 	dataMap := strSliceToMap(data)
 	ch <- dataMap
 	ch_ct <- len(data)
@@ -140,6 +149,63 @@ func ReadOneList(path string, args Args) [][]string {
 		// line[0]=footprint, line[1]=filename
 
 		rows = append(rows, []string{line[0], line[rowIndex]})
+	}
+
+	return rows
+}
+
+func ReadOneListAndTrimPath(path string, args Args) [][]string {
+	fmt.Println("\033[34m━━━━━━━━━━━ reconstructPathByIndex ━━━━━━━━━━━\033[0m")
+	trimIndex := 0
+	if strings.Contains(path, "listA") {
+		trimIndex = Config.TrimIndexPathA
+	} else {
+		trimIndex = Config.TrimIndexPathB
+	}
+	var rows [][]string
+
+	// comparison criteria = map key for signature comparison, can be filename (row 1) or path (row 2)
+	rowIndex := 1
+	if args.ComparisonCriteria == "path" {
+		rowIndex = 2
+	}
+
+	// Open the CSV file
+	file, err := os.Open(path)
+	if err != nil {
+		fmt.Println(err)
+		return [][]string{}
+	}
+	// Close the file when the function returns
+	defer file.Close()
+
+	// Create a new csv.Reader
+	reader := csv.NewReader(file)
+	// Set the delimiter to TAB
+	reader.Comma = '\t'
+	// Set the comment character to '#'
+	reader.Comment = '#'
+	// Set the number of fields per record to 2, ie footprint in the first column and file name in the second column
+	//reader.FieldsPerRecord = 2
+	// Loop through the remaining lines
+	for {
+		// Read a line
+		line, err := reader.Read()
+		// Check the error value
+		if err != nil {
+			// Break the loop when the end of the file is reached
+			if err == io.EOF {
+				break
+			}
+			// Print the error otherwise
+			fmt.Println(err)
+			return [][]string{}
+		}
+
+		// Append the value to allPath
+		// line[0]=footprint, line[1]=filename
+
+		rows = append(rows, []string{line[0], ReconstructPathByIndex(line[rowIndex], trimIndex, Config.CommonDirSep)})
 	}
 
 	return rows
