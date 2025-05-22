@@ -29,11 +29,15 @@ import (
 
 func main() {
 	fileutil.Title()
-	args := parseARG()
+
+	Config := fileutil.Conf{}
+	Config.Arg = parseARG()
+
+	fileutil.AksUser(Config) // ask user is he wants to trim the path of the footprints
 
 	t0 := time.Now()
 
-	fileutil.ReadLists(args)
+	fileutil.ReadLists()
 
 	fmt.Println("\ndone !")
 	fmt.Println("Elapsed time : ", time.Since(t0))

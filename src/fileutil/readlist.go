@@ -19,19 +19,19 @@
 package fileutil
 
 import (
+	"bufio"
 	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
-type Args struct {
-	ComparisonCriteria string // comparison by filename or path (to compare files with same file names)
-}
+func ReadLists() {
 
-func ReadLists(args Args) {
+	args := Config.Arg
 	// Create a log file and close it
 	logFile, err := os.Create("output.log")
 	if err != nil {
@@ -191,4 +191,33 @@ func Haskey(myMap map[string]string, key string) bool {
 	_, ok := myMap[key]
 
 	return ok
+}
+
+func ReadTsvHead(path string) [][]string {
+	fmt.Println("\033[34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
+	fmt.Println("ReadT head", path)
+	records := [][]string{}
+	// Open the CSV file
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	lineCount := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Split(line, "\t")
+		records = append(records, fields)
+		fmt.Println("\033[33m" + strings.Join(fields, "\t") + "\033[0m")
+		lineCount++
+		if lineCount == 3 {
+			break
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return records
 }

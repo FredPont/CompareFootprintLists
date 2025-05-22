@@ -74,6 +74,7 @@ func RemoveLeadingDirs(path1, path2 string) (string, string) {
 			//fmt.Println(segments1, i, segments1[i], "==>", commonDir1)
 			break
 		}
+		Config.TrimIndexPathA = i
 	}
 
 	// Find the common directory in path2
@@ -83,6 +84,7 @@ func RemoveLeadingDirs(path1, path2 string) (string, string) {
 			commonDir2 = segments2[i]
 			break
 		}
+		Config.TrimIndexPathB = i
 	}
 
 	// Reconstruct the paths from the common directory onward
