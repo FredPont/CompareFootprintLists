@@ -30,10 +30,10 @@ import (
 func main() {
 	fileutil.Title()
 
-	Config := fileutil.Conf{}
-	Config.Arg = parseARG()
+	//Config := fileutil.Conf{}
+	fileutil.Config.Arg = parseARG()
 
-	fileutil.AksUser(Config) // ask user is he wants to trim the path of the footprints
+	fileutil.AksUser() // ask user is he wants to trim the path of the footprints
 
 	t0 := time.Now()
 

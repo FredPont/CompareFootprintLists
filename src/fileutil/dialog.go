@@ -27,25 +27,23 @@ import (
 )
 
 // AksUser ask user if he wants to trim the path of the footprints
-func AksUser(Config Conf) {
+func AksUser() {
 
-	if len(os.Args) > 1 {
-		arg := Config.Arg
-		fmt.Println(Config, "AksUser", arg)
-		if arg.ComparisonCriteria == "path" {
-			fmt.Println("Do you want to trim the path of the footprints ? y/n")
-			// read user input
-			reader := bufio.NewReader(os.Stdin)
-			input, _ := reader.ReadString('\n')
-			if input == "y\n" {
-				Config.TrimPath = true
-				read3lines()
-			} else {
-				Config.TrimPath = false
-			}
+	arg := Config.Arg
+	fmt.Println(Config, "AksUser", arg)
+	if arg.ComparisonCriteria == "path" {
+		fmt.Println("Do you want to trim the path of the footprints ? y/n")
+		// read user input
+		reader := bufio.NewReader(os.Stdin)
+		input, _ := reader.ReadString('\n')
+		if input == "y\n" {
+			Config.TrimPath = true
+			read3lines()
+		} else {
+			Config.TrimPath = false
 		}
-
 	}
+
 }
 
 // read3lines read the first 3 lines of the 2 lists
@@ -59,6 +57,9 @@ func read3lines() {
 
 	// fmt.Println(newPath1)
 	// fmt.Println(newPath2)
+	path1 = removeLeadingSlash(path1)
+	path2 = removeLeadingSlash(path2)
+	showPathAutoTrim(path1, path2)
 	dirToTrim(path1, path2)
 	// showPath(path1, path2)
 	// fmt.Println("Do you want to change the number of directory to trim ? y/n")
@@ -73,15 +74,21 @@ func read3lines() {
 
 // dirToTrim ask user if he wants to change the number of directory to trim
 func dirToTrim(path1, path2 string) {
-	showPath(path1, path2)
+	//showPath(path1, path2)
 	fmt.Println("")
 	fmt.Println("Do you want to change the number of directory to trim ? y/n")
 	// read user input
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')
 	if input == "y\n" {
-		askUserNumber("Number of directory to trim in list A :")
-		askUserNumber("Number of directory to trim in list B :")
+		Config.TrimIndexPathA = askUserNumber("Number of directory to trim in list A :")
+
+		Config.TrimIndexPathB = askUserNumber("Number of directory to trim in list B :")
+		fmt.Println(Config)
+
+		ReconstructPathByIndex(path1, Config.TrimIndexPathA, Config.CommonDirSep)
+		ReconstructPathByIndex(path2, Config.TrimIndexPathB, Config.CommonDirSep)
+		showPath(path1, path2)
 		dirToTrim(path1, path2)
 	}
 }
@@ -101,6 +108,17 @@ func askUserNumber(message string) int {
 
 // showPath show the new path and the number of directory to trim
 func showPath(path1, path2 string) {
+	newPath1 := ReconstructPathByIndex(path1, Config.TrimIndexPathA, Config.CommonDirSep)
+	newPath2 := ReconstructPathByIndex(path2, Config.TrimIndexPathB, Config.CommonDirSep)
+	//newPath1, newPath2 := RemoveLeadingDirs(path1, path2)
+	fmt.Println("\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
+	fmt.Println("\033[31mnewPathA : \033[0m", newPath1, "\033[35mNumber of directory to trim :\033[0m", Config.TrimIndexPathA)
+	fmt.Println("\033[31mnewPathB : \033[0m", newPath2, "\033[35mNumber of directory to trim :\033[0m", Config.TrimIndexPathB)
+
+}
+
+// showPath show the new path and the number of directory to trim
+func showPathAutoTrim(path1, path2 string) {
 	newPath1, newPath2 := RemoveLeadingDirs(path1, path2)
 	fmt.Println("\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
 	fmt.Println("\033[31mnewPathA : \033[0m", newPath1, "\033[35mNumber of directory to trim :\033[0m", Config.TrimIndexPathA)

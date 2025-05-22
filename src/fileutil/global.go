@@ -28,6 +28,7 @@ type Conf struct {
 	TrimIndexPathA int
 	TrimIndexPathB int
 	TrimPath       bool
+	CommonDirSep   string
 }
 
 // Declare a global variable of type Conf
