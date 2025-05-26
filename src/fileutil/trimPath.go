@@ -25,12 +25,9 @@ import (
 // ###########################################
 
 func TrimPath(path1, path2 string) {
-	// path1 := "/p1/p2/common/p3"
-	// path2 := "/d1/common/d2"
 
 	// Process both paths
-	//path1 = removeLeadingSlash(path1)
-	//path2 = removeLeadingSlash(path2)
+
 	newPath1, newPath2 := RemoveLeadingDirs(path1, path2)
 
 	// Print the results
@@ -40,33 +37,14 @@ func TrimPath(path1, path2 string) {
 
 // Function to remove leading directories before the common directory
 func RemoveLeadingDirs(path1, path2 string) (string, string) {
-	//path1 = removeLeadingSlash(path1)
-	//path2 = removeLeadingSlash(path2)
+
 	// Get the separator from the first path. The other path should have the same separator
 	// if the same operating system is used. If not, the separator will be different.
 	// and sep1 will be used to reconstruct the path.
 	sep1 := GetSeparator(path1)
 	sep2 := GetSeparator(path2)
 	Config.CommonDirSep = sep1
-	// Helper function to check if a slice contains a specific element
-	contains := func(slice []string, item string) bool {
-		for _, v := range slice {
-			if v == item {
-				return true
-			}
-		}
-		return false
-	}
 
-	// Helper function to reconstruct the path from the common directory
-	reconstructPath := func(segments []string, commonDir, sep string) string {
-		for i, seg := range segments {
-			if seg == commonDir {
-				return strings.Join(segments[i:], sep)
-			}
-		}
-		return "" // Return empty if commonDir is not found
-	}
 	// Split the paths into segments
 	segments1 := strings.Split(path1, sep1)
 	segments2 := strings.Split(path2, sep2)
@@ -103,6 +81,28 @@ func RemoveLeadingDirs(path1, path2 string) (string, string) {
 	return newPath1, newPath2
 }
 
+// Helper function to check if a slice contains a specific element
+func contains(slice []string, item string) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper function to reconstruct the path from the common directory
+func reconstructPath(segments []string, commonDir, sep string) string {
+	for i, seg := range segments {
+		if seg == commonDir {
+			return strings.Join(segments[i:], sep)
+		}
+	}
+	fmt.Println("Error: commonDir not found")
+	return "" // Return empty if commonDir is not found
+}
+
+// GetSeparator returns the separator for the given path
 func GetSeparator(path string) string {
 	if strings.Contains(path, "\\") {
 		return "\\"

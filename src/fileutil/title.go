@@ -24,7 +24,7 @@ func Title() {
 	fmt.Println("")
 	fmt.Println("   ┌──────────────────────────────────────────┐") // unicode U+250C
 	fmt.Println("   │ Compare Footprint Lists (c)Frederic PONT │")
-	fmt.Println("   │     v20250522 - Free Software GNU GPL    │")
+	fmt.Println("   │     v20250526 - Free Software GNU GPL    │")
 	fmt.Println("   └──────────────────────────────────────────┘")
 	//fmt.Println("")
 }

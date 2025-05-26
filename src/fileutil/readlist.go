@@ -45,15 +45,19 @@ func ReadLists() {
 	ch2 := make(chan map[string]string)
 	cha := make(chan int)
 	chb := make(chan int)
+	chDupA := make(chan int)
+	chDupB := make(chan int)
 
 	// Launch tasks as goroutines
-	go processOneList(la, "list_A/", ch1, cha, args)
-	go processOneList(lb, "list_B/", ch2, chb, args)
+	go processOneList(la, "list_A/", ch1, cha, chDupA, args)
+	go processOneList(lb, "list_B/", ch2, chb, chDupB, args)
 
 	mapA := <-ch1
 	mapB := <-ch2
 	nbFilaA := <-cha
 	nbFilaB := <-chb
+	nbDuplicateA := <-chDupA
+	nbDuplicateB := <-chDupB
 
 	logFile, err = os.OpenFile("output.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -73,9 +77,9 @@ func ReadLists() {
 	switch diffCount {
 	case 0:
 		if nbFilaA == nbFilaB {
-
 			writeLogSTDout("The number of files is the same !", logFile)
 			writeLogSTDout("no differences found !", logFile)
+			duplicateAlert(nbDuplicateA, nbDuplicateB)
 		} else {
 			writeLogSTDout("The number of files is not the same !", logFile)
 			writeLogSTDout("no differences found in common files !", logFile)
@@ -92,7 +96,18 @@ func ReadLists() {
 
 }
 
-func processOneList(list string, Listdir string, ch chan map[string]string, ch_ct chan int, args Args) {
+// duplicateAlert print message if there are duplicate files
+func duplicateAlert(nbDuplicateA, nbDuplicateB int) {
+	if nbDuplicateA != 0 || nbDuplicateB != 0 {
+		fmt.Println("\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
+		fmt.Println("There are", nbDuplicateA, "duplicate files in list_A")
+		fmt.Println("There are", nbDuplicateB, "duplicate files in list_B")
+		fmt.Println("It is recommended to do a comparison by path instead \nof files using the -p option to compare footprints.")
+		fmt.Println("\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
+	}
+}
+
+func processOneList(list string, Listdir string, ch chan map[string]string, ch_ct, chDup chan int, args Args) {
 	var data [][]string
 	if Config.TrimPath {
 		data = ReadOneListAndTrimPath(Listdir+list, args)
@@ -100,9 +115,17 @@ func processOneList(list string, Listdir string, ch chan map[string]string, ch_c
 		data = ReadOneList(Listdir+list, args)
 	}
 
-	dataMap := strSliceToMap(data)
-	ch <- dataMap
-	ch_ct <- len(data)
+	dataMap, duplicates := strSliceToMap(data) // dataMap is a map of file name to footprint
+
+	// Ensure to send a default value if data is empty
+	if len(data) == 0 {
+		ch <- make(map[string]string) // Send an empty map if no data
+		ch_ct <- 0
+	} else {
+		ch <- dataMap
+		ch_ct <- len(data)
+	}
+	chDup <- duplicates
 }
 
 func ReadOneList(path string, args Args) [][]string {
@@ -214,7 +237,8 @@ func ReadOneListAndTrimPath(path string, args Args) [][]string {
 	return rows
 }
 
-func strSliceToMap(slice [][]string) map[string]string {
+func strSliceToMap(slice [][]string) (map[string]string, int) {
+	duplicates := 0
 	// Open the log file for appending (create if it doesn't exist)
 	logFile, err := os.OpenFile("output.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -227,10 +251,12 @@ func strSliceToMap(slice [][]string) map[string]string {
 	for _, row := range slice {
 		if Haskey(fpMap, row[1]) {
 			writeLogSTDout("Duplicate file ! "+row[1], logFile)
+			duplicates++
 		}
 		fpMap[row[1]] = row[0]
 	}
-	return fpMap
+	fmt.Println("duplicates", duplicates)
+	return fpMap, duplicates
 }
 
 func compareMaps(map1 map[string]string, map2 map[string]string) (int, [][]string) {
