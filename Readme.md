@@ -23,7 +23,8 @@ Usage :
 
 example : ./cmpfp-x86_64_linux.bin -p path
 
- With the option  -p path, the comparison use the file path as reference key, instead of the file name. The advantage is that duplicate file names are allowed, but the file path have to be identicals (or made identical by removing the non-constant part of the path)
+ With the option  -p path, the comparison use the file path as reference key, instead of the file name. The advantage is that duplicate file names are allowed, but the file path have to be identical (or made identical by removing the non-constant part of the path).
+ The user can ask the program to trim the path of the footprints before comparison. This is done by answering yes to the question "Do you want to trim the path of the footprints ?". The program will then try to guess the common directory between the two lists and ask you to validate the position of the common directory in the two lists.
 
 # Features
 - Statically compiled binary : nothing to install in the system
@@ -35,10 +36,11 @@ example : ./cmpfp-x86_64_linux.bin -p path
 
 # Tips
 - To compare 2 lists with 2 columns (footprint, fileName or path) run the software without argument (fileName reference by default will be used in the second column)
-- To compare lists with file duplicates, use <-p path> option. If necessary remove the beginning of the file path that could lead to diffences. For example :
+- To compare lists with file duplicates, use <-p path> option. If necessary remove the beginning of the file path that could lead to differences. For example :
 path in list A is /home/bob/MyDir
 path in list B is /home/fred/MyDir
 then set path to < MyDir > in both lists 
+The last version of the program will propose to trim the path of the footprints automatically.
 
 # ScreenShots
 ![CLI](src/web/screenshot1.png)
