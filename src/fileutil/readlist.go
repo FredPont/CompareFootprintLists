@@ -29,6 +29,7 @@ import (
 	"strings"
 )
 
+// ReadLists read 2 lists of footprints and compare them
 func ReadLists() {
 
 	args := Config.Arg
@@ -107,6 +108,7 @@ func duplicateAlert(nbDuplicateA, nbDuplicateB int) {
 	}
 }
 
+// processOneList read one list of footprints and build a map of file name to footprint
 func processOneList(list string, Listdir string, ch chan map[string]string, ch_ct, chDup chan int, args Args) {
 	var data [][]string
 	if Config.TrimPath {
@@ -128,6 +130,7 @@ func processOneList(list string, Listdir string, ch chan map[string]string, ch_c
 	chDup <- duplicates
 }
 
+// ReadOneList read one list of footprints and return a slice of string
 func ReadOneList(path string, args Args) [][]string {
 	var rows [][]string
 
@@ -178,6 +181,7 @@ func ReadOneList(path string, args Args) [][]string {
 	return rows
 }
 
+// ReadOneListAndTrimPath read one list of footprints and return a 2 columns slice of string with the signature and the trimed path
 func ReadOneListAndTrimPath(path string, args Args) [][]string {
 	fmt.Println("\033[34m━━━━━━━━━━━ reconstructPathByIndex ━━━━━━━━━━━\033[0m")
 
@@ -237,6 +241,7 @@ func ReadOneListAndTrimPath(path string, args Args) [][]string {
 	return rows
 }
 
+// strSliceToMap convert a slice of string to a map of file name to footprint
 func strSliceToMap(slice [][]string) (map[string]string, int) {
 	duplicates := 0
 	// Open the log file for appending (create if it doesn't exist)
@@ -255,10 +260,11 @@ func strSliceToMap(slice [][]string) (map[string]string, int) {
 		}
 		fpMap[row[1]] = row[0]
 	}
-	fmt.Println("duplicates", duplicates)
+	//fmt.Println("duplicates", duplicates)
 	return fpMap, duplicates
 }
 
+// compareMaps compare 2 maps of file name to footprint
 func compareMaps(map1 map[string]string, map2 map[string]string) (int, [][]string) {
 	//var differences [][]string
 	differences := [][]string{{"file", "footprint A", "footprint B"}}
@@ -288,6 +294,7 @@ func Haskey(myMap map[string]string, key string) bool {
 	return ok
 }
 
+// ReadTsvHead read the header of a TSV file
 func ReadTsvHead(path string) [][]string {
 	fmt.Println("\033[34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
 	fmt.Println("ReadT head", path)
