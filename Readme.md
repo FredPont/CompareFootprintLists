@@ -29,6 +29,8 @@ example : ./cmpfp-x86_64_linux.bin -p path
 # Features
 - Statically compiled binary : nothing to install in the system
 - Compare 2 lists of 3 columns (footprint, file name, path)
+- Table of control sum mismatch
+- Table of files with same control sum
 - Parallel comparison
 - First column of the list is used as reference (file name) by default and the second column is used as value (file footprint)
 - Duplicate detection
