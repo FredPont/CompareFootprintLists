@@ -1,19 +1,19 @@
 /*
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 
- Written by Frederic PONT.
- (c) Frederic Pont 2024
+Written by Frederic PONT.
+(c) Frederic Pont 2024
 */
 
 package main
@@ -28,48 +28,36 @@ import (
 )
 
 func main() {
-	fileutil.Title()
+	fileutil.PrintTitle()
 
-	//Config := fileutil.Conf{}
-	fileutil.Config.Arg = parseARG()
+	fileutil.Config.Arg = parseArgs()
 
-	fileutil.AksUser() // ask user is he wants to trim the path of the footprints
+	// Ask user for path-trim preferences BEFORE launching goroutines,
+	// so that Config is fully populated when the workers read it.
+	fileutil.AskUser()
 
 	t0 := time.Now()
 
 	fileutil.ReadLists()
 
-	fmt.Println("\ndone !")
-	fmt.Println("Elapsed time : ", time.Since(t0))
+	fileutil.PrintInfo(fmt.Sprintf("Elapsed time: %s", time.Since(t0)))
 
-	fmt.Println("Press 'Enter' to exit.")
+	fmt.Println()
+	fileutil.PrintInfo("Press Enter to exit.")
 
-	// reader for reading the user input
 	reader := bufio.NewReader(os.Stdin)
-
-	// wait for the user to press the enter key
-	_, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("Error reading input: ", err)
-		return
+	if _, err := reader.ReadString('\n'); err != nil {
+		fileutil.PrintError(fmt.Sprintf("Error reading input: %v", err))
 	}
-
-	fmt.Println("Program exited.")
-
-	// Define the duration for the countdown
-	// Set the countdown time in seconds
-	//countdownFrom := 3
-	//fileutil.Timer(countdownFrom)
-	//time.Sleep(3 * time.Second) // sleep to read results before windows close
 }
 
-// parse arg of the command line and return the argument struct
-func parseARG() fileutil.Args {
+// parseArgs parses CLI flags and returns an Args struct.
+func parseArgs() fileutil.Args {
 	args := fileutil.Args{}
 	flag.StringVar(&args.ComparisonCriteria, "p", "filename",
-		`		Comparison by file names or path. filename or path.
-		This option is useful if there are file duplicates whith the same name. 
-		Caution, if path is used, the full file path must be the same in both lists`)
+		`Comparison key: "filename" (default) or "path".
+Use "path" when duplicate filenames exist across lists.
+Caution: with "path", the full path must be identical in both lists.`)
 	flag.Parse()
 	return args
 }

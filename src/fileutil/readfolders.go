@@ -23,15 +23,6 @@ import (
 	"os"
 )
 
-func GetLists() (string, string) {
-	fa := Readdir("list_A")
-	fb := Readdir("list_B")
-
-	fmt.Println(fa, fb)
-	// return 2 lists
-	return fa[0], fb[0]
-}
-
 func Readdir(dirPath string) []string {
 	var filenames []string
 	// Read the directory contents

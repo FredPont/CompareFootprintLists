@@ -51,8 +51,8 @@ func AksUser() {
 func read3lines() {
 
 	la, lb := GetLists()
-	HeadA := ReadTsvHead("list_A/" + la)
-	HeadB := ReadTsvHead("list_B/" + lb)
+	HeadA := ReadTSVHeader("list_A/" + la)
+	HeadB := ReadTSVHeader("list_B/" + lb)
 	path1, path2 := HeadA[0][2], HeadB[0][2]
 
 	path1 = removeLeadingSlash(path1)

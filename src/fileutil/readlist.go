@@ -7,298 +7,246 @@ import (
 	"io"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 )
 
-// FileRecord holds all three columns for a file entry.
+const (
+	dirListA   = "list_A/"
+	dirListB   = "list_B/"
+	dirResults = "results/"
+	logFile    = "output.log"
+)
+
+// FileRecord holds the three columns for one entry in a footprint list.
 type FileRecord struct {
-	Footprint string
-	Key       string // filename or path, depending on comparison mode
-	Path      string // always the original path column (col 2)
+	Footprint string // column 0: hash / checksum
+	Key       string // column 1 or 2: comparison key (filename or path)
+	Path      string // column 2: original filesystem path
 }
 
-// ReadLists read 2 lists of footprints and compare them
-func ReadLists() {
+// ── Public entry point ────────────────────────────────────────────────────────
 
+// ReadLists reads both footprint lists, compares them, and writes result files.
+func ReadLists() {
 	args := Config.Arg
-	// Create a log file and close it
-	logFile, err := os.Create("output.log")
-	if err != nil {
-		log.Fatal(err)
-	}
-	logFile.Close()
+
+	// Initialise a clean log file for this run
+	logger, closeLog := newLogger()
+	defer closeLog()
 
 	la, lb := GetLists()
 
-	// Channels to receive results from goroutines
-	ch1 := make(chan map[string]FileRecord)
-	ch2 := make(chan map[string]FileRecord)
-	cha := make(chan int)
-	chb := make(chan int)
-	chDupA := make(chan int)
-	chDupB := make(chan int)
-
-	// Launch tasks as goroutines
-	go processOneList(la, "list_A/", ch1, cha, chDupA, args)
-	go processOneList(lb, "list_B/", ch2, chb, chDupB, args)
-
-	mapA := <-ch1
-	mapB := <-ch2
-	nbFilaA := <-cha
-	nbFilaB := <-chb
-	nbDuplicateA := <-chDupA
-	nbDuplicateB := <-chDupB
-
-	logFile, err = os.OpenFile("output.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Println(err)
+	// Load both lists concurrently
+	type result struct {
+		data      map[string]FileRecord
+		count     int
+		dupCount  int
 	}
-	defer logFile.Close()
+	chA := make(chan result, 1)
+	chB := make(chan result, 1)
 
-	writeLogSTDout(strconv.Itoa(nbFilaA)+" files in "+la, logFile)
-	writeLogSTDout(strconv.Itoa(nbFilaB)+" files in "+lb, logFile)
+	go func() {
+		data := loadList(dirListA+la, args)
+		m, dups := buildFileMap(data, logger)
+		chA <- result{m, len(data), dups}
+	}()
+	go func() {
+		data := loadList(dirListB+lb, args)
+		m, dups := buildFileMap(data, logger)
+		chB <- result{m, len(data), dups}
+	}()
 
-	fmt.Println(Config)
+	resA := <-chA
+	resB := <-chB
 
-	diffCount, diff, commonCount, common := compareMaps(mapA, mapB)
+	logInfo(logger, fmt.Sprintf("%d files in %s", resA.count, la))
+	logInfo(logger, fmt.Sprintf("%d files in %s", resB.count, lb))
 
-	// Always write the common files table
+	diffCount, diffs, commonCount, commons := compareMaps(resA.data, resB.data)
+
+	// Write common files table (always, when there are matches)
 	if commonCount > 0 {
-		writeLogSTDout(strconv.Itoa(commonCount)+" common files found !", logFile)
-		printCSV(common, "common.csv")
-	} else {
-		writeLogSTDout("no common files found !", logFile)
+		writeCSV(commons, dirResults+"common.csv")
+		logInfo(logger, fmt.Sprintf("%d common file(s) written to results/common.csv", commonCount))
 	}
 
-	switch diffCount {
-	case 0:
-		if nbFilaA == nbFilaB {
-			writeLogSTDout("The number of files is the same !", logFile)
-			writeLogSTDout("no differences found !", logFile)
-			duplicateAlert(nbDuplicateA, nbDuplicateB)
-		} else {
-			writeLogSTDout("The number of files is not the same !", logFile)
-			writeLogSTDout("no differences found in common files !", logFile)
-		}
-
-	default:
-		if nbFilaA != nbFilaB {
-			writeLogSTDout("The number of files is not the same !", logFile)
-		}
-		writeLogSTDout(strconv.Itoa(diffCount)+" differences found !", logFile)
-		printCSV(diff, "diff.csv")
+	// Write differences table
+	if diffCount > 0 {
+		writeCSV(diffs, dirResults+"diff.csv")
+		logInfo(logger, fmt.Sprintf("%d difference(s) written to results/diff.csv", diffCount))
 	}
+
+	// Print summary to terminal
+	PrintSummary(resA.count, resB.count, diffCount, commonCount, la, lb)
+	PrintDuplicateAlert(resA.dupCount, resB.dupCount)
 }
 
-// duplicateAlert print message if there are duplicate files
-func duplicateAlert(nbDuplicateA, nbDuplicateB int) {
-	if nbDuplicateA != 0 || nbDuplicateB != 0 {
-		fmt.Println("\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
-		fmt.Println("There are", nbDuplicateA, "duplicate files in list_A")
-		fmt.Println("There are", nbDuplicateB, "duplicate files in list_B")
-		fmt.Println("It is recommended to do a comparison by path instead \nof files using the -p option to compare footprints.")
-		fmt.Println("\033[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
-	}
-}
+// ── List loading ──────────────────────────────────────────────────────────────
 
-// processOneList read one list of footprints and build a map of key → FileRecord
-func processOneList(list string, Listdir string, ch chan map[string]FileRecord, ch_ct, chDup chan int, args Args) {
-	var data [][]string
+// loadList reads one TSV footprint file and returns raw 3-column rows.
+// It delegates to the trim variant when path trimming is active.
+func loadList(path string, args Args) [][]string {
 	if Config.TrimPath {
-		data = ReadOneListAndTrimPath(Listdir+list, args)
-	} else {
-		data = ReadOneList(Listdir+list, args)
+		return loadListTrimPath(path, args)
 	}
-
-	dataMap, duplicates := strSliceToMap(data)
-
-	if len(data) == 0 {
-		ch <- make(map[string]FileRecord)
-		ch_ct <- 0
-	} else {
-		ch <- dataMap
-		ch_ct <- len(data)
-	}
-	chDup <- duplicates
+	return loadListRaw(path, args)
 }
 
-// ReadOneList read one list of footprints and return a 3-column slice:
-// [footprint, key (filename or path), path]
-func ReadOneList(path string, args Args) [][]string {
-	var rows [][]string
+// loadListRaw reads a TSV file and returns [footprint, key, path] rows.
+func loadListRaw(path string, args Args) [][]string {
+	keyCol := keyColumnIndex(args)
+	return parseTSV(path, func(line []string) []string {
+		return []string{line[0], line[keyCol], pathColumn(line)}
+	})
+}
 
-	rowIndex := 1
-	if args.ComparisonCriteria == "path" {
-		rowIndex = 2
-	}
+// loadListTrimPath reads a TSV file and trims the leading directories from the
+// key column before returning [footprint, trimmedKey, originalPath] rows.
+func loadListTrimPath(path string, args Args) [][]string {
+	keyCol := keyColumnIndex(args)
+	trimIdx := trimIndexFor(path)
 
+	PrintSection(fmt.Sprintf("Trimming path — index %d — %s", trimIdx, path))
+
+	return parseTSV(path, func(line []string) []string {
+		trimmed := ReconstructPathByIndex(
+			removeLeadingSlash(line[keyCol]),
+			trimIdx,
+			Config.CommonDirSep,
+		)
+		return []string{line[0], trimmed, pathColumn(line)}
+	})
+}
+
+// parseTSV opens a tab-separated file, skips comment lines (#), and applies
+// transform to each row. Returns nil on open error.
+func parseTSV(path string, transform func([]string) []string) [][]string {
 	file, err := os.Open(path)
 	if err != nil {
-		fmt.Println(err)
-		return [][]string{}
+		PrintError(fmt.Sprintf("Cannot open %s: %v", path, err))
+		return nil
 	}
 	defer file.Close()
 
 	reader := csv.NewReader(file)
 	reader.Comma = '\t'
 	reader.Comment = '#'
+	reader.LazyQuotes = true
 
-	for {
-		line, err := reader.Read()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			fmt.Println(err)
-			return [][]string{}
-		}
-
-		pathCol := ""
-		if len(line) > 2 {
-			pathCol = line[2]
-		}
-		// [footprint, key, path]
-		rows = append(rows, []string{line[0], line[rowIndex], pathCol})
-	}
-
-	return rows
-}
-
-// ReadOneListAndTrimPath read one list and trim the path column before building the key.
-func ReadOneListAndTrimPath(path string, args Args) [][]string {
-	fmt.Println("\033[34m━━━━━━━━━━━ reconstructPathByIndex ━━━━━━━━━━━\033[0m")
-
-	trimIndex := 0
-	if strings.Contains(path, "list_A") {
-		trimIndex = Config.TrimIndexPathA
-	} else {
-		trimIndex = Config.TrimIndexPathB
-	}
-	fmt.Println("trimIndex", trimIndex)
 	var rows [][]string
-
-	rowIndex := 1
-	if args.ComparisonCriteria == "path" {
-		rowIndex = 2
-	}
-
-	file, err := os.Open(path)
-	if err != nil {
-		fmt.Println(err)
-		return [][]string{}
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	reader.Comma = '\t'
-	reader.Comment = '#'
-
 	for {
 		line, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			fmt.Println(err)
-			return [][]string{}
+			PrintWarning(fmt.Sprintf("Skipping malformed line in %s: %v", path, err))
+			continue
 		}
-
-		pathCol := ""
-		if len(line) > 2 {
-			pathCol = line[2]
-		}
-		trimmedKey := ReconstructPathByIndex(removeLeadingSlash(line[rowIndex]), trimIndex, Config.CommonDirSep)
-		// [footprint, trimmed key, original path]
-		rows = append(rows, []string{line[0], trimmedKey, pathCol})
+		rows = append(rows, transform(line))
 	}
-
 	return rows
 }
 
-// strSliceToMap convert a 3-column slice to a map of key → FileRecord
-func strSliceToMap(slice [][]string) (map[string]FileRecord, int) {
+// ── Map building ──────────────────────────────────────────────────────────────
+
+// buildFileMap converts a 3-column row slice into a key→FileRecord map.
+// Duplicate keys are counted and logged.
+func buildFileMap(rows [][]string, logger *log.Logger) (map[string]FileRecord, int) {
+	m := make(map[string]FileRecord, len(rows))
 	duplicates := 0
-	logFile, err := os.OpenFile("output.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Println(err)
-	}
-	defer logFile.Close()
 
-	fpMap := make(map[string]FileRecord, len(slice))
-
-	for _, row := range slice {
-		key := row[1]
-		pathCol := ""
-		if len(row) > 2 {
-			pathCol = row[2]
+	for _, row := range rows {
+		if len(row) < 2 {
+			continue
 		}
-		if Haskey(fpMap, key) {
-			writeLogSTDout("Duplicate file ! "+key, logFile)
+		key := row[1]
+		path := ""
+		if len(row) > 2 {
+			path = row[2]
+		}
+		if _, exists := m[key]; exists {
+			logInfo(logger, "Duplicate file: "+key)
 			duplicates++
 		}
-		fpMap[key] = FileRecord{
-			Footprint: row[0],
-			Key:       key,
-			Path:      pathCol,
-		}
+		m[key] = FileRecord{Footprint: row[0], Key: key, Path: path}
 	}
-	return fpMap, duplicates
+	return m, duplicates
 }
 
-// compareMaps compare 2 maps and return differences AND common files.
-// Returns: diffCount, diff rows, commonCount, common rows
+// ── Comparison ────────────────────────────────────────────────────────────────
+
+// compareMaps compares two FileRecord maps and returns:
+//   - diffCount  : number of differing or missing entries
+//   - diffs      : TSV rows for results/diff.csv
+//   - commonCount: number of identical entries
+//   - commons    : TSV rows for results/common.csv
 func compareMaps(mapA, mapB map[string]FileRecord) (int, [][]string, int, [][]string) {
-	differences := [][]string{{"file", "footprint_A", "footprint_B"}}
-	common := [][]string{{"file", "footprint", "path_in_A", "path_in_B"}}
+	diffs := [][]string{{"file", "footprint_A", "footprint_B"}}
+	commons := [][]string{{"file", "footprint", "path_in_A", "path_in_B"}}
 	diffCount := 0
 	commonCount := 0
 
+	// Iterate A: find differences and common files
 	for key, recA := range mapA {
-		if recB, ok := mapB[key]; !ok {
-			// present in A, missing in B
-			differences = append(differences, []string{key, recA.Footprint, ""})
+		recB, inB := mapB[key]
+		switch {
+		case !inB:
+			// Present in A, absent from B
+			diffs = append(diffs, []string{key, recA.Footprint, ""})
 			diffCount++
-		} else if recA.Footprint != recB.Footprint {
-			// present in both but different signature
-			differences = append(differences, []string{key, recA.Footprint, recB.Footprint})
+		case recA.Footprint != recB.Footprint:
+			// Present in both but signatures differ
+			diffs = append(diffs, []string{key, recA.Footprint, recB.Footprint})
 			diffCount++
-		} else {
-			// identical signature → common
-			common = append(common, []string{key, recA.Footprint, recA.Path, recB.Path})
+		default:
+			// Identical — record with paths from both lists
+			commons = append(commons, []string{key, recA.Footprint, recA.Path, recB.Path})
 			commonCount++
 		}
 	}
 
-	// Files present in B but missing in A
+	// Iterate B: find entries absent from A (not yet counted)
 	for key, recB := range mapB {
-		if _, ok := mapA[key]; !ok {
-			differences = append(differences, []string{key, "", recB.Footprint})
+		if _, inA := mapA[key]; !inA {
+			diffs = append(diffs, []string{key, "", recB.Footprint})
 			diffCount++
 		}
 	}
 
-	return diffCount, differences, commonCount, common
+	return diffCount, diffs, commonCount, commons
 }
 
-// writeLogSTDout write message to stdout and log file
-func writeLogSTDout(message string, logFile *os.File) {
-	fmt.Println(message)
-	log.SetOutput(logFile)
-	log.Println(message)
+// ── TSV output ────────────────────────────────────────────────────────────────
+
+// writeCSV writes a slice of rows as a tab-separated file.
+func writeCSV(data [][]string, filePath string) {
+	file, err := os.Create(filePath)
+	if err != nil {
+		PrintError(fmt.Sprintf("Cannot create %s: %v", filePath, err))
+		return
+	}
+	defer file.Close()
+
+	w := csv.NewWriter(file)
+	w.Comma = '\t'
+	defer w.Flush()
+
+	for _, row := range data {
+		if err := w.Write(row); err != nil {
+			PrintWarning(fmt.Sprintf("Write error in %s: %v", filePath, err))
+		}
+	}
+	PrintSuccess("Written: " + filePath)
 }
 
-// Haskey test if key is in map
-func Haskey(myMap map[string]FileRecord, key string) bool {
-	_, ok := myMap[key]
-	return ok
-}
+// ── TSV header reader ─────────────────────────────────────────────────────────
 
-// ReadTsvHead read the first 3 lines of a TSV file
-func ReadTsvHead(path string) [][]string {
-	fmt.Println("\033[34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m")
-	fmt.Println("ReadT head", path)
-	records := [][]string{}
+// ReadTSVHeader reads and returns the first three lines of a TSV file.
+func ReadTSVHeader(path string) [][]string {
+	PrintSection("Reading header: " + path)
+	var records [][]string
+
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -306,19 +254,59 @@ func ReadTsvHead(path string) [][]string {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	lineCount := 0
-	for scanner.Scan() {
+	for i := 0; scanner.Scan() && i < 3; i++ {
 		line := scanner.Text()
 		fields := strings.Split(line, "\t")
 		records = append(records, fields)
-		fmt.Println("\033[33m" + strings.Join(fields, "\t") + "\033[0m")
-		lineCount++
-		if lineCount == 3 {
-			break
-		}
+		PrintInfo(strings.Join(fields, "\t"))
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
 	return records
+}
+
+// ── Logging ───────────────────────────────────────────────────────────────────
+
+// newLogger creates a file-only logger for output.log (no ANSI codes in file).
+// Returns the logger and a close function to defer.
+func newLogger() (*log.Logger, func()) {
+	f, err := os.Create(logFile)
+	if err != nil {
+		log.Fatal("Cannot create log file:", err)
+	}
+	logger := log.New(f, "", log.LstdFlags)
+	return logger, func() { f.Close() }
+}
+
+// logInfo writes a plain-text message to the log file AND prints it to terminal.
+func logInfo(logger *log.Logger, msg string) {
+	fmt.Println(msg)
+	logger.Println(msg)
+}
+
+// ── Small helpers ─────────────────────────────────────────────────────────────
+
+// keyColumnIndex returns 1 (filename) or 2 (path) depending on config.
+func keyColumnIndex(args Args) int {
+	if args.ComparisonCriteria == "path" {
+		return 2
+	}
+	return 1
+}
+
+// pathColumn safely returns column 2, or "" if the row is too short.
+func pathColumn(line []string) string {
+	if len(line) > 2 {
+		return line[2]
+	}
+	return ""
+}
+
+// trimIndexFor returns the correct trim index depending on which list is processed.
+func trimIndexFor(path string) int {
+	if strings.Contains(path, "list_A") {
+		return Config.TrimIndexPathA
+	}
+	return Config.TrimIndexPathB
 }
