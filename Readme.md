@@ -47,3 +47,4 @@ The last version of the program will propose to trim the path of the footprints 
 # ScreenShots
 ![CLI](src/web/screenshot1.png)
 ![CLI](src/web/screenshot2.png)
+![CLI](src/web/screenshot3.png)
